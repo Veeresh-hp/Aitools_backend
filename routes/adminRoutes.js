@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Tool = require('../models/Tool');
 const Category = require('../models/Category');
 const Stack = require('../models/Stack');
+const Report = require('../models/Report');
 const { sendDigest } = require('../utils/scheduler');
 const { auth, requireAdmin } = require('../middleware/auth');
 
@@ -67,13 +68,14 @@ router.get('/categories', async (req, res) => {
 // @desc    Get dashboard statistics
 router.get('/stats', async (req, res) => {
     try {
-        const [userCount, toolCount, stackCount, categoryCount, pendingTools, pendingCategories] = await Promise.all([
+        const [userCount, toolCount, stackCount, categoryCount, pendingTools, pendingCategories, pendingReports] = await Promise.all([
             User.countDocuments(),
             Tool.countDocuments(),
             Stack.countDocuments(),
             Category.countDocuments(),
-            Tool.countDocuments({ isApproved: false }),
-            Category.countDocuments({ isApproved: false })
+            Tool.countDocuments({ status: 'pending' }),
+            Category.countDocuments({ status: 'pending' }),
+            Report.countDocuments({ status: 'pending' })
         ]);
 
         const sevenDaysAgo = new Date();
@@ -89,7 +91,8 @@ router.get('/stats', async (req, res) => {
             },
             pending: {
                 tools: pendingTools,
-                categories: pendingCategories
+                categories: pendingCategories,
+                reports: pendingReports
             },
             growth: {
                 newUsersLast7Days: newUsers

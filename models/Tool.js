@@ -5,6 +5,7 @@ const toolSchema = new mongoose.Schema({
   shortDescription: { type: String, required: true, trim: true }, // Short summary for cards
   description: { type: String, required: true, trim: true }, // Full detailed description
   url: { type: String, required: true, trim: true }, // Tool link is now required
+  videoUrl: { type: String, trim: true }, // Optional YouTube video URL
   category: { type: String, required: true, trim: true }, // Category for the tool
   snapshotUrl: { type: String, required: true, trim: true }, // Image is now required
   hashtags: { type: [String], default: [] }, // Array of hashtags

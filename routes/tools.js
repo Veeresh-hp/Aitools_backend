@@ -176,7 +176,7 @@ router.get('/check-duplicate', async (req, res) => {
 // POST /api/tools/submit - submit a new tool
 router.post('/submit', async (req, res) => {
   try {
-    const { name, shortDescription, description, url, category, pricing, snapshotUrl, hashtags } = req.body;
+    const { name, shortDescription, description, url, videoUrl, category, pricing, snapshotUrl, hashtags } = req.body;
 
     // Optional: Determine submitter if logged in
     let submittedBy = null;
@@ -220,6 +220,7 @@ router.post('/submit', async (req, res) => {
       shortDescription,
       description,
       url,
+      videoUrl,
       category,
       pricing,
       snapshotUrl,
@@ -350,7 +351,7 @@ router.post('/notify-add', auth, requireAdmin, async (req, res) => {
 // PUT /api/tools/:id/edit - update a tool (admin only)
 router.put('/:id/edit', auth, requireAdmin, async (req, res) => {
   try {
-    const { name, shortDescription, description, url, category, pricing, snapshotUrl, hashtags, isAiToolsChoice } = req.body;
+    const { name, shortDescription, description, url, videoUrl, category, pricing, snapshotUrl, hashtags, isAiToolsChoice } = req.body;
     
     const tool = await Tool.findById(req.params.id);
     if (!tool) return res.status(404).json({ error: 'Tool not found' });
@@ -360,6 +361,7 @@ router.put('/:id/edit', auth, requireAdmin, async (req, res) => {
     if (shortDescription !== undefined) tool.shortDescription = shortDescription;
     if (description) tool.description = description;
     if (url) tool.url = url;
+    if (videoUrl !== undefined) tool.videoUrl = videoUrl;
     if (category) tool.category = category;
     if (pricing) tool.pricing = pricing;
     if (snapshotUrl) tool.snapshotUrl = snapshotUrl;
