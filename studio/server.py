@@ -42,6 +42,10 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@app.get("/")
+def health_check():
+    return {"status": "healthy"}
+
 @app.get("/api")
 def read_root():
     return FileResponse("static/index.html")
