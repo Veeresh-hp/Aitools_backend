@@ -1,0 +1,37 @@
+# How to Delete Approved Tools
+
+Currently, there is no "Delete" button in the Admin Dashboard for approved tools. You typically do this manually via the backend to prevent accidental deletions.
+
+## Step 1: Open Terminal
+1. Open your terminal (VS Code).
+2. Navigate to the backend folder:
+   ```bash
+   cd backend
+   ```
+
+## Step 2: Find the Tool ID
+You need the unique **ID** of the tool to delete it. Use the [findTool.js](file:///c:/Users/HP/Desktop/ai-tools-hub/Backend/findTool.js) script I created for you.
+
+Run this command (replace "Name" with the tool's name):
+```bash
+node findTool.js "Tool Name"
+```
+*Example:* `node findTool.js "Contractor"`
+
+It will output something like:
+```text
+Name:   Contractor+ Estimatic AI
+ID:     6948f7d85e4f7a12febf4c41   <-- COPY THIS ID
+Status: approved
+```
+
+## Step 3: Delete the Tool
+Run the deletion script using the ID you just copied:
+
+```bash
+node deleteTool.js <PASTE_ID_HERE>
+```
+
+*Example:* `node deleteTool.js 6948f7d85e4f7a12febf4c41`
+
+**That's it! The tool is permanently deleted.**
