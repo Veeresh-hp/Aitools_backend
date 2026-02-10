@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+rembg
+opencv-python-headless
+numpy
+onnxruntime
+Pillow
+requests
+aiohttp
+undetected-chromedriver
+selenium
