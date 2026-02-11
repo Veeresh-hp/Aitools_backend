@@ -47,7 +47,9 @@ def resolve_with_browser(url):
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    options.add_argument("--ignore-certificate-errors")
+    options.add_argument("--allow-running-insecure-content")
+    options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
     
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
@@ -142,7 +144,20 @@ def resolve_with_browser(url):
             print(f"💡 Fallback best candidate: {best_candidate}")
             return best_candidate
 
-        return url # Return original if absolutely nothing found
+        if best_candidate:
+            print(f"💡 Fallback best candidate: {best_candidate}")
+            return best_candidate
+
+        # Logging failure details
+        print(f"❌ Failed to resolve. Page Title: {driver.title}")
+        print(f"❌ Current URL: {driver.current_url}")
+        
+        # Check for Cloudflare/Blocking
+        page_source = driver.page_source.lower()
+        if "cloudflare" in page_source or "just a moment" in driver.title.lower():
+            print("🚫 Cloudflare Block Detected")
+
+        return None # Return None to trigger error handling in server.py
             
     except Exception as e:
         print(f"🔥 Browser Error resolving {url}: {e}")

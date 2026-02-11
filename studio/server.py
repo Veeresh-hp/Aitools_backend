@@ -160,7 +160,8 @@ async def freepik_download(request: FreepikRequest):
             image_url = await asyncio.to_thread(resolve_with_browser, url)
         
         if not image_url or (image_url == url and not is_direct_image_link(url)):
-             return {"error": "Failed to resolve high-res image. Freepik might be blocking the request or the URL is restricted. Please try again or check the URL."}
+             # Check if we can get more info (this would require refactoring resolve_with_browser to return dict)
+             return {"error": "Failed to resolve high-res image. The server might be blocked by Freepik or Cloudflare. Please try a different URL."}
 
         # 2. Download the Image Locally
         print(f"⬇️ Downloading High-Res Image: {image_url}")
