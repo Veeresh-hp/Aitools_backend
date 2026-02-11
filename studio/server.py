@@ -28,7 +28,9 @@ app.add_middleware(
         "http://localhost:5173", 
         "http://127.0.0.1:5173",
         "https://www.myalltools.shop",
-        "https://ai-tools-pm4secrvk-veeresh-h-ps-projects.vercel.app"
+        "https://myalltools.shop",
+        "https://ai-tools-pm4secrvk-veeresh-h-ps-projects.vercel.app",
+        "https://ai-tools-hub.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
