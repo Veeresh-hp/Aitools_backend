@@ -8,10 +8,6 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-# Add current directory to path to import enhancer
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from enhancer.enhance import premium_ai_upscale
-from logo_remover.remover import remove_logo
 from rembg import remove, new_session
 from PIL import Image
 import io
@@ -78,6 +74,11 @@ async def remove_logo_endpoint(
     # Run Logo Removal
     try:
         print(f"Removing logo from {image_path} using mask {mask_path} -> {output_path}")
+        
+        # Lazy load to save memory on startup
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from logo_remover.remover import remove_logo
+        
         result = remove_logo(image_path, mask_path, output_path)
         
         if result:
@@ -107,6 +108,11 @@ async def upload_image(file: UploadFile = File(...), mode: str = Form("fast")):
     # Run Enhancement
     try:
         print(f"Enhancing {file_path} -> {output_path} (Mode: {mode})")
+        
+        # Lazy load to save memory on startup
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from enhancer.enhance import premium_ai_upscale
+        
         premium_ai_upscale(file_path, output_path, mode=mode)
         
         return {
