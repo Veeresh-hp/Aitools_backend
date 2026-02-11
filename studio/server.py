@@ -23,14 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000", 
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "https://www.myalltools.shop",
-        "https://myalltools.shop",
-        "https://ai-tools-pm4secrvk-veeresh-h-ps-projects.vercel.app",
-        "https://ai-tools-hub.vercel.app"
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
