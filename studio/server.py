@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from enhancer.enhance import premium_ai_upscale
 from logo_remover.remover import remove_logo
-from rembg import remove
+from rembg import remove, new_session
 from PIL import Image
 import io
 
@@ -256,8 +256,10 @@ async def remove_background(image: UploadFile = File(...)):
         with open(input_path, "rb") as f:
             input_data = f.read()
             
-        # AI Matting
-        output_data = remove(input_data)
+        # Use lightweight model for memory efficiency
+        model_name = "u2netp"
+        session = new_session(model_name)
+        output_data = remove(input_data, session=session)
         
         # Save as PNG to preserve transparency
         output_filename = f"{os.path.splitext(filename)[0]}_no_bg.png"
