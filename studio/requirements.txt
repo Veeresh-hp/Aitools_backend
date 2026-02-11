@@ -11,3 +11,4 @@ aiohttp
 undetected-chromedriver
 selenium
 aiofiles
+setuptools
