@@ -8,7 +8,7 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from rembg import remove, new_session
+# from rembg import remove, new_session # Moved to function for lazy loading
 from PIL import Image
 import io
 
@@ -266,6 +266,9 @@ async def remove_background(image: UploadFile = File(...)):
         with open(input_path, "rb") as f:
             input_data = f.read()
             
+        # Lazy load rembg
+        from rembg import remove, new_session
+        
         # Use lightweight model for memory efficiency
         model_name = "u2netp"
         session = new_session(model_name)
