@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 import time
+import shutil
 
 # URLS = ["..."]
 
@@ -40,6 +41,8 @@ def resolve_with_browser(url):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
@@ -64,15 +67,30 @@ def resolve_with_browser(url):
         selectors = [
             'meta[property="og:image"]',
             'meta[name="twitter:image"]',
-            'meta[property="og:image:secure_url"]'
+            'meta[property="og:image:secure_url"]',
+            'img[data-cy="image-viewer-content"]',  # Common scraper target
+            '.image-container img', # Another common container
+            '#main-image',
+            'img[src*="img.freepik.com/premium-"]', # Direct source check
+            'img[src*="img.freepik.com/free-"]'
         ]
         
         image_url = None
         for selector in selectors:
             try:
-                meta = driver.find_element(By.CSS_SELECTOR, selector)
-                content = meta.get_attribute('content')
-                if content and content.startswith('http'):
+                if selector.startswith('meta'):
+                    element = driver.find_element(By.CSS_SELECTOR, selector)
+                    content = element.get_attribute('content')
+                else:
+                    element = driver.find_element(By.CSS_SELECTOR, selector)
+                    content = element.get_attribute('src')
+                
+                if content and content.startswith('http') and 'favicon' not in content:
+                    # Filter out small thumbnails if possible
+                    if 'size=626' in content: 
+                         # Try to find a larger version if we grabbed a thumbnail
+                         content = content.replace('size=626', 'size=338').replace('width=626', 'width=2000') # Naive attempt, but sometimes works
+                    
                     image_url = content
                     print(f"🎯 Found image URL via {selector}: {image_url}")
                     break
@@ -82,23 +100,58 @@ def resolve_with_browser(url):
         if image_url:
             return image_url
             
-        print("⚠️ All meta selectors failed. Trying fallback to first large image.")
-        # Fallback: look for 0_1.jpg or similar unwatermarked-ish patterns if they exist
+        print("⚠️ All selectors failed. Dumping all meta tags for debug...")
+        try:
+            metas = driver.find_elements(By.TAG_NAME, "meta")
+            for m in metas:
+                name = m.get_attribute("name") or m.get_attribute("property")
+                content = m.get_attribute("content")
+                if name and "image" in name.lower():
+                    print(f"   Found meta: {name} = {content}")
+        except:
+            pass
+
+        print("⚠️ Trying fallback to ANY large Freepik image.")
+        # Fallback: look for ANY img.freepik.com image that looks like a content image
         imgs = driver.find_elements(By.TAG_NAME, 'img')
+        best_candidate = None
+        max_width = 0
+        
         for img in imgs:
             src = img.get_attribute('src')
-            if src and 'img.freepik.com' in src and ('-premium' in src or '_1.jpg' in src):
-                print(f"💡 Fallback potential source: {src}")
-                return src
+            if src and 'img.freepik.com' in src and 'favicon' not in src:
+                # Check for size if possible
+                try:
+                    width = int(img.get_attribute('naturalWidth') or 0)
+                    if width > max_width and width > 400: # Filter for large images
+                        max_width = width
+                        best_candidate = src
+                except:
+                    pass
+                
+                # Check for AI/Premium indicators if size check fails
+                if not best_candidate and ('/premium-' in src or '/ai-' in src or 'view' in src):
+                     best_candidate = src
+
+        if best_candidate:
+            print(f"💡 Fallback best candidate: {best_candidate}")
+            return best_candidate
 
         return url # Return original if absolutely nothing found
             
     except Exception as e:
         print(f"🔥 Browser Error resolving {url}: {e}")
+        # Debug screenshot on failure
+        if driver:
+             try:
+                driver.save_screenshot("debug_failed_headless.png")
+                print("📸 Saved debug_failed_headless.png")
+             except: pass
         return url
     finally:
         if driver:
             try:
+                # Force kill to prevent hanging processes
                 driver.quit()
             except:
                 pass
