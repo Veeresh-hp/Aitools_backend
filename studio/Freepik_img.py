@@ -4,17 +4,17 @@ import aiofiles
 import os
 import re
 from urllib.parse import urlparse
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
+# import undetected_chromedriver as uc
+# from selenium.webdriver.common.by import By
 import time
 import shutil
 
 # URLS = ["..."]
 
 # Downloads folder (Windows)
-DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-if not os.path.exists(DOWNLOAD_DIR):
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+# DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+# if not os.path.exists(DOWNLOAD_DIR):
+#     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -33,6 +33,11 @@ def get_chrome_version():
 
 def resolve_with_browser(url):
     print(f"🔍 Inspecting page with Browser: {url}")
+    
+    # Lazy load dependencies
+    import undetected_chromedriver as uc
+    from selenium.webdriver.common.by import By
+    
     options = uc.ChromeOptions()
     
     # Headless arguments for server environment

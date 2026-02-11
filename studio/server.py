@@ -130,7 +130,7 @@ async def upload_image(file: UploadFile = File(...), mode: str = Form("fast")):
 # --------------------------------------------------------------------------------
 # Freepik Downloader Endpoint
 # --------------------------------------------------------------------------------
-from Freepik_img import resolve_with_browser
+# from Freepik_img import resolve_with_browser # Moved to function scope
 import requests
 from pydantic import BaseModel
 
@@ -142,6 +142,10 @@ async def freepik_download(request: FreepikRequest):
     try:
         url = request.url
         print(f"📥 Received Freepik URL: {url}")
+        
+        # Lazy load Freepik logic to prevent startup crashes
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from Freepik_img import resolve_with_browser
 
         # 1. Resolve High-Res URL using Browser (Blocking, run in thread)
         # But first check if it's already a direct image
