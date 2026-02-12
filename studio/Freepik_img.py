@@ -50,7 +50,10 @@ def resolve_with_browser(url):
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-running-insecure-content")
     options.add_argument("--incognito")
-    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
+    # Updated User-Agent to a very recent version (Chrome 123)
+    # Using a common, modern UA string helps avoid immediate blocks
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+    options.add_argument(f"--user-agent={user_agent}")
     
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
@@ -58,87 +61,95 @@ def resolve_with_browser(url):
     driver = None
     try:
         # Check for Linux/Nixpacks Chromium location
-        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome")
+        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome")
         if chrome_bin:
             options.binary_location = chrome_bin
+            print(f"Using Chrome binary at: {chrome_bin}")
             
         if version:
             driver = uc.Chrome(options=options, version_main=version)
         else:
             driver = uc.Chrome(options=options)
             
-        driver.set_page_load_timeout(30)
+        driver.set_page_load_timeout(45) # Increased timeout
         driver.get(url)
-        time.sleep(7) # Wait for Cloudflare/heavy JS loading
+        
+        # Enhanced waiting strategy
+        print("Waiting for page load...")
+        time.sleep(5) # Initial wait for dynamic content
+        
+        # Try to scroll down to trigger lazy loading
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
+        time.sleep(2)
         
         # Try multiple meta tag possibilities for best image source
         selectors = [
             'meta[property="og:image"]',
             'meta[name="twitter:image"]',
             'meta[property="og:image:secure_url"]',
-            'img[data-cy="image-viewer-content"]',  # Common scraper target
-            '.image-container img', # Another common container
+            'div.image-container img', 
+            'img[data-cy="image-viewer-content"]',  
             '#main-image',
-            'img[src*="img.freepik.com/premium-"]', # Direct source check
+            'link[rel="preload"][as="image"]', 
+            'img[src*="img.freepik.com/premium-"]', 
             'img[src*="img.freepik.com/free-"]',
-            'link[rel="canonical"]'
         ]
         
         image_url = None
         for selector in selectors:
             try:
-                if selector.startswith('meta') or selector.startswith('link'):
-                    element = driver.find_element(By.CSS_SELECTOR, selector)
-                    content = element.get_attribute('content') if selector.startswith('meta') else element.get_attribute('href')
-                else:
-                    element = driver.find_element(By.CSS_SELECTOR, selector)
-                    content = element.get_attribute('src')
-                
-                if content and content.startswith('http') and 'favicon' not in content:
-                    # Filter out small thumbnails if possible
-                    if 'size=626' in content: 
-                         # Try to find a larger version if we grabbed a thumbnail
-                         content = content.replace('size=626', 'size=338').replace('width=626', 'width=2000') # Naive attempt, but sometimes works
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    if selector.startswith('meta') or selector.startswith('link'):
+                        content = element.get_attribute('content') if selector.startswith('meta') else element.get_attribute('href')
+                    else:
+                        content = element.get_attribute('src')
                     
-                    image_url = content
-                    print(f"[SUCCESS] Found image URL via {selector}: {image_url}")
-                    break
+                    if content and content.startswith('http') and 'favicon' not in content:
+                        # Filter out small thumbnails if possible
+                        if 'size=626' in content: 
+                             # Try to find a larger version if we grabbed a thumbnail
+                             content = content.replace('size=626', 'size=338').replace('width=626', 'width=2000') 
+                        
+                        image_url = content
+                        print(f"[SUCCESS] Found candidate via {selector}: {image_url}")
+                        # If we found a meta image, it's usually the best one. Stop.
+                        if 'og:image' in selector or 'twitter:image' in selector:
+                            return image_url
+                        
+                        # Otherwise, keep looking but break inner loop
+                        break
+                
+                if image_url:
+                     break
             except:
                 continue
         
         if image_url:
             return image_url
-            
-        print("[WARN] All selectors failed. Dumping all meta tags for debug...")
-        try:
-            metas = driver.find_elements(By.TAG_NAME, "meta")
-            for m in metas:
-                name = m.get_attribute("name") or m.get_attribute("property")
-                content = m.get_attribute("content")
-                if name and "image" in name.lower():
-                    print(f"   Found meta: {name} = {content}")
-        except:
-            pass
 
-        print("[WARN] Trying fallback to ANY large Freepik image.")
+        print("[WARN] Selectors failed. Checking all images...")
         # Fallback: look for ANY img.freepik.com image that looks like a content image
         imgs = driver.find_elements(By.TAG_NAME, 'img')
         best_candidate = None
-        max_width = 0
+        max_size = 0
         
         for img in imgs:
             src = img.get_attribute('src')
             if src and 'img.freepik.com' in src and 'favicon' not in src:
-                # Check for size if possible
+                # Check for visual size if possible
                 try:
                     width = int(img.get_attribute('naturalWidth') or 0)
-                    if width > max_width and width > 400: # Filter for large images
-                        max_width = width
+                    height = int(img.get_attribute('naturalHeight') or 0)
+                    size = width * height
+                    
+                    if size > max_size and width > 400: # Filter for large images
+                        max_size = size
                         best_candidate = src
                 except:
                     pass
                 
-                # Check for AI/Premium indicators if size check fails
+                # Check for AI/Premium indicators if size check fails or is 0 (lazy load)
                 if not best_candidate and ('/premium-' in src or '/ai-' in src or 'view' in src):
                      best_candidate = src
 
