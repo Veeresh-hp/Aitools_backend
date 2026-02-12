@@ -4,20 +4,11 @@ import aiofiles
 import os
 import re
 from urllib.parse import urlparse
-# import undetected_chromedriver as uc
-# from selenium.webdriver.common.by import By
 import time
 import shutil
 
-# URLS = ["..."]
-
-# Downloads folder (Windows)
-# DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-# if not os.path.exists(DOWNLOAD_DIR):
-#     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
 }
 
 def get_chrome_version():
@@ -51,7 +42,6 @@ def resolve_with_browser(url):
     options.add_argument("--allow-running-insecure-content")
     options.add_argument("--incognito")
     # Updated User-Agent to a very recent version (Chrome 123)
-    # Using a common, modern UA string helps avoid immediate blocks
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     options.add_argument(f"--user-agent={user_agent}")
     
@@ -157,10 +147,6 @@ def resolve_with_browser(url):
             print(f"[INFO] Fallback best candidate: {best_candidate}")
             return best_candidate
 
-        if best_candidate:
-            print(f"[INFO] Fallback best candidate: {best_candidate}")
-            return best_candidate
-
         # Logging failure details
         print(f"[ERROR] Failed to resolve. Page Title: {driver.title}")
         print(f"[ERROR] Current URL: {driver.current_url}")
@@ -174,74 +160,10 @@ def resolve_with_browser(url):
             
     except Exception as e:
         print(f"[ERROR] Browser Error resolving {url}: {e}")
-        # Debug screenshot on failure
-        if driver:
-             try:
-                driver.save_screenshot("debug_failed_headless.png")
-                print("[INFO] Saved debug_failed_headless.png")
-             except: pass
         return url
     finally:
         if driver:
             try:
-                # Force kill to prevent hanging processes
                 driver.quit()
             except:
                 pass
-
-def is_direct_image(url):
-    path = urlparse(url).path.lower()
-    return any(path.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif'])
-
-async def resolve_image_url(session, url):
-    if is_direct_image(url):
-        return url
-        
-    if "freepik.com" in url:
-        # Run blocking browser in a separate thread
-        return await asyncio.to_thread(resolve_with_browser, url)
-    return url
-
-async def download_image(session, url):
-    # First resolve the URL if it's a page
-    resolved_url = await resolve_image_url(session, url)
-    
-    # Parse filename from resolved URL, ignoring query params
-    filename = os.path.basename(urlparse(resolved_url).path)
-    if not filename or '.' not in filename:
-        filename = f"freepik_{int(time.time())}.jpg"
-        
-    file_path = os.path.join(DOWNLOAD_DIR, filename)
-
-    try:
-        async with session.get(resolved_url) as response:
-            if response.status == 200:
-                print(f"[INFO] Saving to: {file_path}")
-                async with aiofiles.open(file_path, "wb") as f:
-                    async for chunk in response.content.iter_chunked(8192):
-                        await f.write(chunk)
-                
-                if os.path.exists(file_path):
-                    size = os.path.getsize(file_path)
-                    print(f"[SUCCESS] Downloaded: {filename} (Size: {size} bytes)")
-                    print(f"[INFO] Full Path: {os.path.abspath(file_path)}")
-                else:
-                    print(f"[ERROR] File missing after download: {file_path}")
-            else:
-                print(f"[ERROR] Failed to download image ({response.status}): {resolved_url}")
-    except Exception as e:
-        print(f"[WARN] Error downloading {resolved_url}: {e}")
-
-async def main():
-    # Example usage
-    URLS = [input("Enter the URL of the image: ")]
-    connector = aiohttp.TCPConnector(limit=10)
-    async with aiohttp.ClientSession(headers=HEADERS, connector=connector) as session:
-        tasks = [download_image(session, url) for url in URLS]
-        await asyncio.gather(*tasks)
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass

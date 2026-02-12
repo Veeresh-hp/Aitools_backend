@@ -7,9 +7,6 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
-# from rembg import remove, new_session # Moved to function for lazy loading
-from PIL import Image
 import io
 
 app = FastAPI()
@@ -39,11 +36,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/")
 def health_check():
-    return {"status": "healthy", "version": "1.0.1-freepik-fix"}
+    return {"status": "healthy", "version": "1.0.2-freepik-fix-remote-switch"}
 
 @app.get("/api/version")
 def get_version():
-    return {"version": "1.0.1-freepik-fix", "timestamp": int(time.time())}
+    return {"version": "1.0.2-freepik-fix-remote-switch", "timestamp": int(time.time())}
 
 @app.get("/api")
 def read_root():
@@ -72,9 +69,7 @@ async def remove_logo_endpoint(
             shutil.copyfileobj(mask.file, buffer)
     
     # Generate output path
-    # Generate output path
     filename_no_ext, file_extension = os.path.splitext(safe_filename)
-    # Default to .jpg if no extension, otherwise keep original (normalize to lower)
     ext = file_extension.lower() if file_extension else ".jpg"
     output_filename = f"{filename_no_ext}_cleaned{ext}"
     output_path = os.path.join(UPLOAD_DIR, output_filename)
@@ -134,7 +129,6 @@ async def upload_image(file: UploadFile = File(...), mode: str = Form("fast")):
 # --------------------------------------------------------------------------------
 # Freepik Downloader Endpoint
 # --------------------------------------------------------------------------------
-# from Freepik_img import resolve_with_browser # Moved to function scope
 import requests
 from pydantic import BaseModel
 
@@ -152,7 +146,6 @@ async def freepik_download(request: FreepikRequest):
         from Freepik_img import resolve_with_browser
 
         # 1. Resolve High-Res URL using Browser (Blocking, run in thread)
-        # But first check if it's already a direct image
         def is_direct_image_link(u):
             from urllib.parse import urlparse
             path = urlparse(u).path.lower()
@@ -164,7 +157,6 @@ async def freepik_download(request: FreepikRequest):
             image_url = await asyncio.to_thread(resolve_with_browser, url)
         
         if not image_url or (image_url == url and not is_direct_image_link(url)):
-             # Check if we can get more info (this would require refactoring resolve_with_browser to return dict)
              return {"error": "Failed to resolve high-res image. The server might be blocked by Freepik or Cloudflare. Please try a different URL."}
 
         # 2. Download the Image Locally
@@ -239,7 +231,6 @@ async def delete_project(filename: str):
         if os.path.exists(file_path):
             os.remove(file_path)
             # Find and remove associated masks or cleaned versions if applicable
-            # (Keep it simple for now and only delete the specific file requested)
             return {"message": f"Successfully deleted {filename}"}
         else:
             return {"error": "File not found"}
