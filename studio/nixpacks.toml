@@ -1,6 +1,6 @@
 # Nixpacks configuration
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "chromium", "chromedriver", "ffmpeg", "libGL", "mesa"]
+nixPkgs = ["python311Full", "chromium", "chromedriver", "ffmpeg", "libGL", "mesa"]
 
 [phases.install]
 cmds = ["python3 -m pip install -r requirements.txt"]
