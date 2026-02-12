@@ -39,7 +39,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/")
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": "1.0.1-freepik-fix"}
+
+@app.get("/api/version")
+def get_version():
+    return {"version": "1.0.1-freepik-fix", "timestamp": int(time.time())}
 
 @app.get("/api")
 def read_root():
