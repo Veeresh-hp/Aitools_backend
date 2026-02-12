@@ -141,7 +141,7 @@ class FreepikRequest(BaseModel):
 async def freepik_download(request: FreepikRequest):
     try:
         url = request.url
-        print(f"📥 Received Freepik URL: {url}")
+        print(f"[INFO] Received Freepik URL: {url}")
         
         # Lazy load Freepik logic to prevent startup crashes
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -164,7 +164,7 @@ async def freepik_download(request: FreepikRequest):
              return {"error": "Failed to resolve high-res image. The server might be blocked by Freepik or Cloudflare. Please try a different URL."}
 
         # 2. Download the Image Locally
-        print(f"⬇️ Downloading High-Res Image: {image_url}")
+        print(f"[INFO] Downloading High-Res Image: {image_url}")
         
         # Improved filename extraction for encoded URLs
         parsed_url = urlparse(image_url)
@@ -194,7 +194,7 @@ async def freepik_download(request: FreepikRequest):
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
         
-        print(f"✅ Saved to: {output_path}")
+        print(f"[SUCCESS] Saved to: {output_path}")
 
         return {
             "original_url": url,
@@ -204,7 +204,7 @@ async def freepik_download(request: FreepikRequest):
         }
 
     except Exception as e:
-        print(f"❌ Freepik Error: {e}")
+        print(f"[ERROR] Freepik Error: {e}")
         return {"error": str(e)}
 
 @app.get("/api/projects")
@@ -240,7 +240,7 @@ async def delete_project(filename: str):
         else:
             return {"error": "File not found"}
     except Exception as e:
-        print(f"❌ Delete Error: {e}")
+        print(f"[ERROR] Delete Error: {e}")
         return {"error": str(e)}
 
 @app.delete("/api/delete-all-projects")
@@ -254,7 +254,7 @@ async def delete_all_projects():
                 count += 1
         return {"message": f"Successfully deleted {count} projects"}
     except Exception as e:
-        print(f"❌ Bulk Delete Error: {e}")
+        print(f"[ERROR] Bulk Delete Error: {e}")
         return {"error": str(e)}
 
 @app.post("/api/remove-bg")
@@ -292,7 +292,7 @@ async def remove_background(image: UploadFile = File(...)):
             "filename": output_filename
         }
     except Exception as e:
-        print(f"❌ BG Removal Error: {e}")
+        print(f"[ERROR] BG Removal Error: {e}")
         return {"error": str(e)}
 
 if __name__ == "__main__":
