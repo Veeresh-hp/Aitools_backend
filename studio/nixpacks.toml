@@ -1,6 +1,9 @@
 # Nixpacks configuration
-# We rely on the standard Python provider for python setup (triggered by requirements.txt)
-# We only need to add system dependencies here.
-
 [phases.setup]
-nixPkgs = ["chromium", "chromedriver", "ffmpeg", "libGL", "mesa"]
+nixPkgs = ["python311", "python311Packages.pip", "chromium", "chromedriver", "ffmpeg", "libGL", "mesa"]
+
+[phases.install]
+cmds = ["python3 -m pip install -r requirements.txt"]
+
+[start]
+cmd = "python3 -m uvicorn server:app --host 0.0.0.0 --port $PORT"
