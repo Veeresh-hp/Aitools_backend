@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "chromium", "chromedriver", "ffmpeg", "libgl1"]
+nixPkgs = ["python311", "chromium", "chromedriver", "ffmpeg", "libGL", "mesa"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
