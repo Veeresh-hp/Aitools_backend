@@ -28,11 +28,11 @@ def get_chrome_version():
         main_version = int(version.split('.')[0])
         return main_version
     except Exception as e:
-        print(f"⚠️ Could not detect Chrome version: {e}")
+        print(f"[WARN] Could not detect Chrome version: {e}")
         return None
 
 def resolve_with_browser(url):
-    print(f"🔍 Inspecting page with Browser: {url}")
+    print(f"[INFO] Inspecting page with Browser: {url}")
     
     # Lazy load dependencies
     import undetected_chromedriver as uc
@@ -49,7 +49,8 @@ def resolve_with_browser(url):
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-running-insecure-content")
-    options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+    options.add_argument("--incognito")
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
     
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
@@ -79,15 +80,16 @@ def resolve_with_browser(url):
             '.image-container img', # Another common container
             '#main-image',
             'img[src*="img.freepik.com/premium-"]', # Direct source check
-            'img[src*="img.freepik.com/free-"]'
+            'img[src*="img.freepik.com/free-"]',
+            'link[rel="canonical"]'
         ]
         
         image_url = None
         for selector in selectors:
             try:
-                if selector.startswith('meta'):
+                if selector.startswith('meta') or selector.startswith('link'):
                     element = driver.find_element(By.CSS_SELECTOR, selector)
-                    content = element.get_attribute('content')
+                    content = element.get_attribute('content') if selector.startswith('meta') else element.get_attribute('href')
                 else:
                     element = driver.find_element(By.CSS_SELECTOR, selector)
                     content = element.get_attribute('src')
@@ -99,7 +101,7 @@ def resolve_with_browser(url):
                          content = content.replace('size=626', 'size=338').replace('width=626', 'width=2000') # Naive attempt, but sometimes works
                     
                     image_url = content
-                    print(f"🎯 Found image URL via {selector}: {image_url}")
+                    print(f"[SUCCESS] Found image URL via {selector}: {image_url}")
                     break
             except:
                 continue
@@ -107,7 +109,7 @@ def resolve_with_browser(url):
         if image_url:
             return image_url
             
-        print("⚠️ All selectors failed. Dumping all meta tags for debug...")
+        print("[WARN] All selectors failed. Dumping all meta tags for debug...")
         try:
             metas = driver.find_elements(By.TAG_NAME, "meta")
             for m in metas:
@@ -118,7 +120,7 @@ def resolve_with_browser(url):
         except:
             pass
 
-        print("⚠️ Trying fallback to ANY large Freepik image.")
+        print("[WARN] Trying fallback to ANY large Freepik image.")
         # Fallback: look for ANY img.freepik.com image that looks like a content image
         imgs = driver.find_elements(By.TAG_NAME, 'img')
         best_candidate = None
@@ -141,31 +143,31 @@ def resolve_with_browser(url):
                      best_candidate = src
 
         if best_candidate:
-            print(f"💡 Fallback best candidate: {best_candidate}")
+            print(f"[INFO] Fallback best candidate: {best_candidate}")
             return best_candidate
 
         if best_candidate:
-            print(f"💡 Fallback best candidate: {best_candidate}")
+            print(f"[INFO] Fallback best candidate: {best_candidate}")
             return best_candidate
 
         # Logging failure details
-        print(f"❌ Failed to resolve. Page Title: {driver.title}")
-        print(f"❌ Current URL: {driver.current_url}")
+        print(f"[ERROR] Failed to resolve. Page Title: {driver.title}")
+        print(f"[ERROR] Current URL: {driver.current_url}")
         
         # Check for Cloudflare/Blocking
         page_source = driver.page_source.lower()
         if "cloudflare" in page_source or "just a moment" in driver.title.lower():
-            print("🚫 Cloudflare Block Detected")
+            print("[BLOCK] Cloudflare Block Detected")
 
         return None # Return None to trigger error handling in server.py
             
     except Exception as e:
-        print(f"🔥 Browser Error resolving {url}: {e}")
+        print(f"[ERROR] Browser Error resolving {url}: {e}")
         # Debug screenshot on failure
         if driver:
              try:
                 driver.save_screenshot("debug_failed_headless.png")
-                print("📸 Saved debug_failed_headless.png")
+                print("[INFO] Saved debug_failed_headless.png")
              except: pass
         return url
     finally:
@@ -203,21 +205,21 @@ async def download_image(session, url):
     try:
         async with session.get(resolved_url) as response:
             if response.status == 200:
-                print(f"📂 Saving to: {file_path}")
+                print(f"[INFO] Saving to: {file_path}")
                 async with aiofiles.open(file_path, "wb") as f:
                     async for chunk in response.content.iter_chunked(8192):
                         await f.write(chunk)
                 
                 if os.path.exists(file_path):
                     size = os.path.getsize(file_path)
-                    print(f"✅ Downloaded: {filename} (Size: {size} bytes)")
-                    print(f"📍 Full Path: {os.path.abspath(file_path)}")
+                    print(f"[SUCCESS] Downloaded: {filename} (Size: {size} bytes)")
+                    print(f"[INFO] Full Path: {os.path.abspath(file_path)}")
                 else:
-                    print(f"❌ File missing after download: {file_path}")
+                    print(f"[ERROR] File missing after download: {file_path}")
             else:
-                print(f"❌ Failed to download image ({response.status}): {resolved_url}")
+                print(f"[ERROR] Failed to download image ({response.status}): {resolved_url}")
     except Exception as e:
-        print(f"⚠️ Error downloading {resolved_url}: {e}")
+        print(f"[WARN] Error downloading {resolved_url}: {e}")
 
 async def main():
     # Example usage
