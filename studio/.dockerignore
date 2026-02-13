@@ -1,0 +1,12 @@
+uploads/
+__pycache__/
+*.pyc
+venv/
+.venv/
+.git/
+.env
+debug_freepik.png
+Png_Imagi/
+logo_remover/__pycache__/
+enhancer/__pycache__/
+video_remover/__pycache__/
