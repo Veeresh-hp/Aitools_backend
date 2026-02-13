@@ -41,7 +41,8 @@ def resolve_with_browser(url):
     options = uc.ChromeOptions()
     
     # Headless arguments for server environment
-    options.add_argument("--headless=new")
+    # Headless arguments for server environment
+    # options.add_argument("--headless=new") # Disabled to run with Xvfb for better stealth
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
