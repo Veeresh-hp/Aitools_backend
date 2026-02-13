@@ -21,31 +21,47 @@ HEADERS = {
 }
 
 def get_chrome_version():
-    try:
-        import winreg
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\BLBeacon")
-        version, _ = winreg.QueryValueEx(key, "version")
-        main_version = int(version.split('.')[0])
-        return main_version
-    except Exception as e:
-        print(f"[WARN] Could not detect Chrome version: {e}")
-        return None
+    """
+    Detect Chrome version on Windows or Linux.
+    Returns major version (int) or None.
+    """
+    # Windows
+    if os.name == 'nt':
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\BLBeacon")
+            version, _ = winreg.QueryValueEx(key, "version")
+            return int(version.split('.')[0])
+        except:
+            pass
 
-def resolve_with_browser(url):
-    print(f"[INFO] Inspecting page with Browser: {url}")
-    
-    # Lazy load dependencies
-    import undetected_chromedriver as uc
-    from selenium.webdriver.common.by import By
-    
+    # Linux / Fallback
+    try:
+        # Try asking the binary directly
+        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome") or "/usr/bin/chromium"
+        if not chrome_bin and os.path.exists("/root/.nix-profile/bin/chromium"):
+             chrome_bin = "/root/.nix-profile/bin/chromium"
+             
+        if chrome_bin:
+            import subprocess
+            result = subprocess.run([chrome_bin, "--version"], capture_output=True, text=True)
+            # Output format: "Chromium 121.0.6167.85 ..."
+            output = result.stdout.strip()
+            match = re.search(r"(\d+)\.\d+\.\d+\.\d+", output)
+            if match:
+                return int(match.group(1))
+    except Exception as e:
+        print(f"[WARN] Failed to detect Chrome version via subprocess: {e}")
+
+    return None
+
+def get_chrome_options():
     options = uc.ChromeOptions()
-    
-    # Headless arguments for server environment
-    # options.add_argument("--headless=new") # Disabled to run with Xvfb for better stealth
+    # options.add_argument("--headless=new") # Disabled to run with Xvfb
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1280,1024") # Match xvfb
+    options.add_argument("--window-size=1280,1024")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-running-insecure-content")
@@ -54,28 +70,34 @@ def resolve_with_browser(url):
     options.add_argument("--disable-application-cache")
     options.add_argument("--disk-cache-size=0")
     
-    # Updated User-Agent
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     options.add_argument(f"--user-agent={user_agent}")
+    
+    # Locate binary
+    chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome") or "/usr/bin/chromium"
+    if not chrome_bin and os.path.exists("/root/.nix-profile/bin/chromium"):
+            chrome_bin = "/root/.nix-profile/bin/chromium"
+    
+    if chrome_bin:
+        options.binary_location = chrome_bin
+    
+    return options
+
+def resolve_with_browser(url):
+    print(f"[INFO] Inspecting page with Browser: {url}")
+    
+    # Lazy load dependencies
+    import undetected_chromedriver as uc
+    from selenium.webdriver.common.by import By
     
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
     
     driver = None
     try:
-        # Check for Linux/Nixpacks Chromium location
-        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome") or "/usr/bin/chromium"
-        
-        # Explicitly check for the nix profile path if not found
-        if not chrome_bin and os.path.exists("/root/.nix-profile/bin/chromium"):
-             chrome_bin = "/root/.nix-profile/bin/chromium"
-
-        if chrome_bin:
-            options.binary_location = chrome_bin
-            print(f"Using Chrome binary at: {chrome_bin}")
-        
         # Initialize driver
         try:
+            options = get_chrome_options() # Get fresh options
             if version:
                 driver = uc.Chrome(options=options, version_main=version)
             else:
@@ -83,8 +105,10 @@ def resolve_with_browser(url):
                 driver = uc.Chrome(options=options, version_main=119)
         except Exception as e:
             print(f"[WARN] Driver init failed with specific version: {e}")
-            print("[INFO] Retrying with default options...")
-            driver = uc.Chrome(options=options)
+            print("[INFO] Retrying with default options (no version_main)...")
+            # CRITICAL FIX: Create NEW options object for retry
+            options_retry = get_chrome_options()
+            driver = uc.Chrome(options=options_retry)
             
         driver.set_page_load_timeout(60) # Increased timeout
         driver.get(url)
