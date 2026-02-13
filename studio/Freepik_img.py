@@ -94,12 +94,23 @@ def resolve_with_browser(url):
     version = get_chrome_version()
     print(f"Detected Chrome Version: {version}")
     
+    # Check for system chromedriver
+    driver_executable_path = shutil.which("chromedriver") or "/usr/bin/chromedriver"
+    if not driver_executable_path and os.path.exists("/root/.nix-profile/bin/chromedriver"):
+        driver_executable_path = "/root/.nix-profile/bin/chromedriver"
+        
+    if driver_executable_path:
+        print(f"Using system chromedriver at: {driver_executable_path}")
+    
     driver = None
     try:
         # Initialize driver
         try:
             options = get_chrome_options() # Get fresh options
-            if version:
+            if driver_executable_path:
+                 # Use system driver if available
+                 driver = uc.Chrome(options=options, driver_executable_path=driver_executable_path, version_main=version if version else 119)
+            elif version:
                 driver = uc.Chrome(options=options, version_main=version)
             else:
                 # Try fixed version first for stability
@@ -109,7 +120,10 @@ def resolve_with_browser(url):
             print("[INFO] Retrying with default options (no version_main)...")
             # CRITICAL FIX: Create NEW options object for retry
             options_retry = get_chrome_options()
-            driver = uc.Chrome(options=options_retry)
+            if driver_executable_path:
+                 driver = uc.Chrome(options=options_retry, driver_executable_path=driver_executable_path)
+            else:
+                 driver = uc.Chrome(options=options_retry)
             
         driver.set_page_load_timeout(60) # Increased timeout
         driver.get(url)
