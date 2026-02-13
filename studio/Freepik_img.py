@@ -51,7 +51,6 @@ def resolve_with_browser(url):
     options.add_argument("--allow-running-insecure-content")
     options.add_argument("--incognito")
     # Updated User-Agent to a very recent version (Chrome 123)
-    # Using a common, modern UA string helps avoid immediate blocks
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     options.add_argument(f"--user-agent={user_agent}")
     
@@ -61,14 +60,26 @@ def resolve_with_browser(url):
     driver = None
     try:
         # Check for Linux/Nixpacks Chromium location
-        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome")
+        chrome_bin = shutil.which("chromium") or shutil.which("google-chrome") or shutil.which("chrome") or "/usr/bin/chromium"
+        
+        # Explicitly check for the nix profile path if not found
+        if not chrome_bin and os.path.exists("/root/.nix-profile/bin/chromium"):
+             chrome_bin = "/root/.nix-profile/bin/chromium"
+
         if chrome_bin:
             options.binary_location = chrome_bin
             print(f"Using Chrome binary at: {chrome_bin}")
-            
-        if version:
-            driver = uc.Chrome(options=options, version_main=version)
-        else:
+        
+        # Initialize driver
+        try:
+            if version:
+                driver = uc.Chrome(options=options, version_main=version)
+            else:
+                # Try fixed version first for stability
+                driver = uc.Chrome(options=options, version_main=119)
+        except Exception as e:
+            print(f"[WARN] Driver init failed with specific version: {e}")
+            print("[INFO] Retrying with default options...")
             driver = uc.Chrome(options=options)
             
         driver.set_page_load_timeout(45) # Increased timeout
