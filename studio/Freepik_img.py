@@ -56,6 +56,7 @@ def get_chrome_version():
     return None
 
 def get_chrome_options():
+    import undetected_chromedriver as uc
     options = uc.ChromeOptions()
     # options.add_argument("--headless=new") # Disabled to run with Xvfb
     options.add_argument("--no-sandbox")
