@@ -2,7 +2,7 @@
 nixPkgs = ["python311Full", "python311Packages.pip", "chromium", "chromedriver", "ffmpeg", "glib", "nss", "nspr", "atk", "cups", "dbus", "libdrm", "gtk3", "pango", "cairo", "alsa-lib", "at-spi2-atk", "at-spi2-core", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libXrender", "xorg.libxkbcommon", "wayland", "mesa"]
 
 [phases.install]
-cmds = ["python3 -m venv /opt/venv", ". /opt/venv/bin/activate && pip install -r requirements.txt"]
+cmds = ["python3 -m venv /opt/venv", ". /opt/venv/bin/activate && pip install -r studio/requirements.txt"]
 
 [start]
-cmd = "/opt/venv/bin/python -m uvicorn server:app --host 0.0.0.0 --port $PORT"
+cmd = "cd studio && /opt/venv/bin/python -m uvicorn server:app --host 0.0.0.0 --port $PORT"
