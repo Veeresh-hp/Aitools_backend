@@ -41,17 +41,20 @@ def resolve_with_browser(url):
     options = uc.ChromeOptions()
     
     # Headless arguments for server environment
-    # Headless arguments for server environment
     # options.add_argument("--headless=new") # Disabled to run with Xvfb for better stealth
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--window-size=1280,1024") # Match xvfb
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-running-insecure-content")
     options.add_argument("--incognito")
-    # Updated User-Agent to a very recent version (Chrome 123)
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-application-cache")
+    options.add_argument("--disk-cache-size=0")
+    
+    # Updated User-Agent
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     options.add_argument(f"--user-agent={user_agent}")
     
@@ -83,16 +86,23 @@ def resolve_with_browser(url):
             print("[INFO] Retrying with default options...")
             driver = uc.Chrome(options=options)
             
-        driver.set_page_load_timeout(45) # Increased timeout
+        driver.set_page_load_timeout(60) # Increased timeout
         driver.get(url)
         
+        # Check for immediate block
+        title = driver.title.lower()
+        print(f"[DEBUG] Page Title: {title}")
+        if "just a moment" in title or "cloudflare" in title:
+             print(f"[BLOCK] Cloudflare detected immediately on {url}")
+             return None
+
         # Enhanced waiting strategy
         print("Waiting for page load...")
-        time.sleep(5) # Initial wait for dynamic content
+        time.sleep(8) # Longer wait for headful + xvfb
         
         # Try to scroll down to trigger lazy loading
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3);")
-        time.sleep(2)
+        time.sleep(3)
         
         # Try multiple meta tag possibilities for best image source
         selectors = [
@@ -179,7 +189,7 @@ def resolve_with_browser(url):
         
         # Check for Cloudflare/Blocking
         page_source = driver.page_source.lower()
-        if "cloudflare" in page_source or "just a moment" in driver.title.lower():
+        if "cloudflare" in page_source or "just a moment" in driver.title.lower() or "challenge" in page_source:
             print("[BLOCK] Cloudflare Block Detected")
 
         return None # Return None to trigger error handling in server.py
